@@ -1,0 +1,63 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# ADK
+.adk/
+*.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.envrc
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+test-results.xml
+coverage.xml
+
+# Ruff
+.ruff_cache/
+
+# Pyright
+.pyright/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Terraform / Terragrunt
+.terraform/
+.terraform.lock.hcl
+.terragrunt-cache/
+*.tfstate
+*.tfstate.backup

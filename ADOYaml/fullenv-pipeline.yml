@@ -1,0 +1,215 @@
+name: $(Build.BuildId) - {{AGENT_NAME}}-BuildAndDeploy
+
+parameters:
+  - name: PR_ID
+    displayName: "PR ID for IaC change detection (optional)"
+    type: string
+    default: ""
+
+variables:
+  serviceAbbreviation: "{{SERVICE_PREFIX}}"
+  deploymentGroupEmail: "{{DEPLOYMENT_GROUP_EMAIL}}"
+  GCP_WIF_PROVIDER_ID: "azuredevops-wlif-provider"
+  GCP_PROJECT_NUMBER_DEV: "TBD"
+  GCP_WIF_POOL_ID_DEV: "{{SERVICE_PREFIX}}-dev-wlif-pool"
+  GCP_PROJECT_NUMBER_TEST: "TBD"
+  GCP_WIF_POOL_ID_TEST: "{{SERVICE_PREFIX}}-test-wlif-pool"
+  GCP_PROJECT_NUMBER_PROD: "TBD"
+  GCP_WIF_POOL_ID_PROD: "{{SERVICE_PREFIX}}-prod-wlif-pool"
+  AGENT_ENGINE_ID_DEV: "TBD"
+  AGENT_ENGINE_ID_TEST: "TBD"
+  AGENT_ENGINE_ID_PROD: "TBD"
+
+resources:
+  repositories:
+    - repository: SharedDevOps
+      type: git
+      name: YourProject/SharedDevOps
+      ref: master
+    - repository: SharedPlatform
+      type: git
+      name: YourProject/SharedPlatform
+      ref: refs/tags/iac-review-v1.0.0
+
+trigger:
+  - main
+
+stages:
+  # =============================================================================
+  # IAC STAGES — Detect and apply infrastructure changes
+  # =============================================================================
+  - template: ADOYaml/templates/detect-iac-changes-stage-template.yml@SharedPlatform
+    parameters:
+      SERVICE_PREFIX: "$(serviceAbbreviation)"
+      ENVIRONMENTS: ["dev", "test", "prod"]
+      DEPENDS_ON: []
+      MANUAL_PR_ID: ${{ parameters.PR_ID }}
+      CONDITION: "succeeded()"
+
+  - template: ADOYaml/templates/wif-terragrunt-stage-template.yml@SharedPlatform
+    parameters:
+      ENV_NAME: "dev"
+      GCP_PROJECT_NUMBER: $(GCP_PROJECT_NUMBER_DEV)
+      GCP_WIF_POOL_ID: $(GCP_WIF_POOL_ID_DEV)
+      GCP_WIF_PROVIDER_ID: $(GCP_WIF_PROVIDER_ID)
+      SERVICE_PREFIX: "$(serviceAbbreviation)"
+      TERRAGRUNT_COMMAND: "apply"
+      DYNAMIC_MODULE_PATHS: $[ stageDependencies.DetectIaCChanges.DetectChanges.outputs['DetectIaCChanges.DEV_MODULES_JSON'] ]
+      DEPENDS_ON:
+        - DetectIaCChanges
+      CONDITION: "and(succeeded(), eq(dependencies.DetectIaCChanges.outputs['DetectChanges.DetectIaCChanges.HAS_DEV_CHANGES'], 'true'))"
+
+  - template: ADOYaml/templates/wif-terragrunt-stage-template.yml@SharedPlatform
+    parameters:
+      ENV_NAME: "test"
+      GCP_PROJECT_NUMBER: $(GCP_PROJECT_NUMBER_TEST)
+      GCP_WIF_POOL_ID: $(GCP_WIF_POOL_ID_TEST)
+      GCP_WIF_PROVIDER_ID: $(GCP_WIF_PROVIDER_ID)
+      SERVICE_PREFIX: "$(serviceAbbreviation)"
+      TERRAGRUNT_COMMAND: "apply"
+      DYNAMIC_MODULE_PATHS: $[ stageDependencies.DetectIaCChanges.DetectChanges.outputs['DetectIaCChanges.TEST_MODULES_JSON'] ]
+      DEPENDS_ON:
+        - DetectIaCChanges
+        - TerraformDEVStage
+      CONDITION: "and(succeeded(), eq(dependencies.DetectIaCChanges.outputs['DetectChanges.DetectIaCChanges.HAS_TEST_CHANGES'], 'true'))"
+
+  - template: ADOYaml/templates/wif-terragrunt-stage-template.yml@SharedPlatform
+    parameters:
+      ENV_NAME: "prod"
+      GCP_PROJECT_NUMBER: $(GCP_PROJECT_NUMBER_PROD)
+      GCP_WIF_POOL_ID: $(GCP_WIF_POOL_ID_PROD)
+      GCP_WIF_PROVIDER_ID: $(GCP_WIF_PROVIDER_ID)
+      SERVICE_PREFIX: "$(serviceAbbreviation)"
+      TERRAGRUNT_COMMAND: "apply"
+      DYNAMIC_MODULE_PATHS: $[ stageDependencies.DetectIaCChanges.DetectChanges.outputs['DetectIaCChanges.PROD_MODULES_JSON'] ]
+      DEPENDS_ON:
+        - DetectIaCChanges
+        - TerraformTESTStage
+      CONDITION: "and(succeeded(), eq(dependencies.DetectIaCChanges.outputs['DetectChanges.DetectIaCChanges.HAS_PROD_CHANGES'], 'true'))"
+
+  # =============================================================================
+  # DEPLOY — Dev (Agent Engine via WIF)
+  # =============================================================================
+  - stage: DeployDevStage
+    displayName: "Deploy to Dev"
+    dependsOn: []
+    pool: terraform-builds
+    jobs:
+      - job: WifAuthDev
+        displayName: "WIF Auth → Dev"
+        steps:
+          - task: AzureCLI@2
+            displayName: "Get OIDC Token"
+            inputs:
+              azureSubscription: "ADO-GCP-WIF"
+              scriptType: pscore
+              scriptLocation: inlineScript
+              inlineScript: |
+                $jwt = az account get-access-token --query accessToken -o tsv
+                Write-Host "##vso[task.setvariable variable=OIDC_TOKEN;isOutput=true;issecret=true;]$jwt"
+            name: GetOidc
+
+      - job: DeployAgentEngineDev
+        displayName: "Agent Engine → Dev"
+        dependsOn: WifAuthDev
+        variables:
+          OIDC_TOKEN: $[ dependencies.WifAuthDev.outputs['GetOidc.OIDC_TOKEN'] ]
+        steps:
+          - checkout: self
+            fetchDepth: 2
+            fetchTags: false
+          - bash: |
+              curl -s -X POST "https://sts.googleapis.com/v1/token" \
+                -H "Content-Type: application/x-www-form-urlencoded" \
+                -d "grant_type=urn:ietf:params:oauth:grant-type:token-exchange&subject_token_type=urn:ietf:params:oauth:token-type:jwt&requested_token_type=urn:ietf:params:oauth:token-type:access_token&audience=//iam.googleapis.com/projects/$(GCP_PROJECT_NUMBER_DEV)/locations/global/workloadIdentityPools/$(GCP_WIF_POOL_ID_DEV)/providers/$(GCP_WIF_PROVIDER_ID)&subject_token=$(OIDC_TOKEN)" \
+                | python3 -c "import sys,json;t=json.load(sys.stdin)['access_token'];open('/tmp/gcp_token','w').write(t)"
+              gcloud config set auth/access_token_file /tmp/gcp_token
+              gcloud config set project $(serviceAbbreviation)-dev-project
+              bin/deploy-agent-engine.sh dev $(AGENT_ENGINE_ID_DEV)
+            displayName: "Deploy to Agent Engine (dev)"
+            env:
+              GOOGLE_CLOUD_PROJECT: "{{SERVICE_PREFIX}}-dev-project"
+              GOOGLE_CLOUD_LOCATION: us-central1
+
+  # =============================================================================
+  # DEPLOY — Test (with manual gate)
+  # =============================================================================
+  - stage: DeployTestStage
+    displayName: "Deploy to Test"
+    dependsOn:
+      - DeployDevStage
+    pool: terraform-builds
+    jobs:
+      - job: WaitForTestValidation
+        pool: server
+        displayName: "Manual Validation — Test"
+        timeoutInMinutes: 4320
+        steps:
+          - task: ManualValidation@0
+            timeoutInMinutes: 1440
+            inputs:
+              notifyUsers: $(deploymentGroupEmail)
+              instructions: "Validate {{AGENT_NAME}} in dev before promoting to test."
+
+      - job: DeployAgentEngineTest
+        displayName: "Agent Engine → Test"
+        dependsOn: WaitForTestValidation
+        steps:
+          - checkout: self
+            fetchDepth: 2
+            fetchTags: false
+          - bash: |
+              bin/deploy-agent-engine.sh test $(AGENT_ENGINE_ID_TEST)
+            displayName: "Deploy to Agent Engine (test)"
+            env:
+              GOOGLE_CLOUD_PROJECT: "{{SERVICE_PREFIX}}-test-project"
+              GOOGLE_CLOUD_LOCATION: us-central1
+
+  # =============================================================================
+  # DEPLOY — Prod (with manual gate + Datadog marker)
+  # =============================================================================
+  - stage: DeployProdStage
+    displayName: "Deploy to Prod"
+    dependsOn:
+      - DeployTestStage
+    pool: terraform-builds
+    jobs:
+      - job: WaitForProdValidation
+        pool: server
+        displayName: "Manual Validation — Prod"
+        timeoutInMinutes: 4320
+        steps:
+          - task: ManualValidation@0
+            timeoutInMinutes: 1440
+            inputs:
+              notifyUsers: $(deploymentGroupEmail)
+              instructions: "Validate {{AGENT_NAME}} in test before promoting to PRODUCTION."
+
+      - job: DeployAgentEngineProd
+        displayName: "Agent Engine → Prod"
+        dependsOn: WaitForProdValidation
+        steps:
+          - checkout: self
+            fetchDepth: 2
+            fetchTags: false
+          - checkout: SharedDevOps
+            path: s/SharedDevOps
+
+          - template: ADOYaml/send-datadog-event-marker.yml@SharedDevOps
+            parameters:
+              eventTitle: "{{AGENT_NAME}} deployment to prod started"
+              eventTags: "source:ado,event_type:release,process:{{AGENT_NAME_LOWER}},deploymentStatus:started"
+              eventAlertType: "info"
+
+          - bash: |
+              bin/deploy-agent-engine.sh prod $(AGENT_ENGINE_ID_PROD)
+            displayName: "Deploy to Agent Engine (prod)"
+            env:
+              GOOGLE_CLOUD_PROJECT: "{{SERVICE_PREFIX}}-prod-project"
+              GOOGLE_CLOUD_LOCATION: us-central1
+
+          - template: ADOYaml/send-datadog-event-marker.yml@SharedDevOps
+            parameters:
+              eventTitle: "{{AGENT_NAME}} deployment to prod completed"
+              eventTags: "source:ado,event_type:release,process:{{AGENT_NAME_LOWER}},deploymentStatus:completed"
+              eventAlertType: "success"

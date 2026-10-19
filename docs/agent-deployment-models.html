@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Deployment Models</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #242836;
+    --border: #2e3345;
+    --text: #e1e4ed;
+    --text-muted: #8b90a0;
+    --accent: #6c8aff;
+    --accent2: #a78bfa;
+    --green: #34d399;
+    --orange: #fb923c;
+    --red: #f87171;
+    --cyan: #22d3ee;
+    --yellow: #fbbf24;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 40px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 1rem;
+    margin-bottom: 48px;
+  }
+  h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 20px;
+    margin-top: 56px;
+  }
+  h2:first-of-type { margin-top: 0; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    margin-bottom: 24px;
+  }
+  .card-header {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+
+  /* ── Flow Diagram ── */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .flow-row {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .flow-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 24px;
+    text-align: center;
+    min-width: 160px;
+    position: relative;
+  }
+  .flow-box .label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .flow-box .name {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .flow-box .detail {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 6px;
+    line-height: 1.6;
+  }
+  .flow-box.blue { border-color: var(--accent); box-shadow: 0 0 20px rgba(108,138,255,0.1); }
+  .flow-box.purple { border-color: var(--accent2); box-shadow: 0 0 20px rgba(167,139,250,0.1); }
+  .flow-box.green { border-color: var(--green); box-shadow: 0 0 20px rgba(52,211,153,0.1); }
+  .flow-box.orange { border-color: var(--orange); box-shadow: 0 0 20px rgba(251,146,60,0.1); }
+  .flow-box.cyan { border-color: var(--cyan); box-shadow: 0 0 20px rgba(34,211,238,0.1); }
+  .flow-box.yellow { border-color: var(--yellow); box-shadow: 0 0 20px rgba(251,191,36,0.1); }
+  .flow-box.wide { min-width: 340px; }
+  .flow-box.xwide { min-width: 500px; }
+
+  .arrow-down {
+    display: flex;
+    justify-content: center;
+    padding: 8px 0;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+  }
+  .arrow-right {
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    padding: 0 4px;
+  }
+
+  /* ── Split / Fork ── */
+  .fork-container {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    align-items: flex-start;
+    position: relative;
+  }
+  .fork-branch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    flex: 1;
+    max-width: 480px;
+  }
+  .fork-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 4px 12px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+  }
+  .fork-label.blue { background: rgba(108,138,255,0.15); color: var(--accent); }
+  .fork-label.purple { background: rgba(167,139,250,0.15); color: var(--accent2); }
+  .fork-label.cyan { background: rgba(34,211,238,0.15); color: var(--cyan); }
+  .fork-divider {
+    width: 1px;
+    background: var(--border);
+    align-self: stretch;
+    margin: 0 8px;
+  }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .badge-blue { background: rgba(108,138,255,0.15); color: var(--accent); }
+  .badge-green { background: rgba(52,211,153,0.15); color: var(--green); }
+  .badge-purple { background: rgba(167,139,250,0.15); color: var(--accent2); }
+  .badge-orange { background: rgba(251,146,60,0.15); color: var(--orange); }
+  .badge-cyan { background: rgba(34,211,238,0.15); color: var(--cyan); }
+  .badge-yellow { background: rgba(251,191,36,0.15); color: var(--yellow); }
+  .badge-red { background: rgba(248,113,113,0.15); color: var(--red); }
+
+  /* ── Table ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  th {
+    text-align: left;
+    color: var(--text-muted);
+    font-weight: 600;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  tr:last-child td { border-bottom: none; }
+
+  .tag-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    font-size: 0.72rem;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+
+  /* ── File Tree ── */
+  .tree {
+    font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 0.8rem;
+    line-height: 1.8;
+    color: var(--text-muted);
+  }
+  .tree .dir { color: var(--accent); font-weight: 600; }
+  .tree .file { color: var(--text); }
+  .tree .new { color: var(--green); }
+  .tree .comment { color: #555b6e; }
+
+  .footer {
+    margin-top: 56px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    text-align: center;
+  }
+
+  .callout {
+    background: rgba(251,191,36,0.06);
+    border: 1px solid rgba(251,191,36,0.2);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-size: 0.82rem;
+    color: var(--yellow);
+    margin-top: 16px;
+  }
+
+  .callout.cyan {
+    background: rgba(34,211,238,0.06);
+    border: 1px solid rgba(34,211,238,0.2);
+    color: var(--cyan);
+  }
+
+  .rel-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 16px 0;
+  }
+  .rel-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 18px;
+    text-align: center;
+    font-size: 0.82rem;
+  }
+  .rel-box .small { font-size: 0.68rem; color: var(--text-muted); margin-top: 2px; }
+  .rel-arrow {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .rel-arrow .arr-label {
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  @media (max-width: 1200px) {
+    .fork-container { flex-direction: column; align-items: center; }
+    .fork-divider { width: 100%; height: 1px; }
+    body { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Agent Deployment Models</h1>
+<p class="subtitle">Agent types and deployment patterns for ADK agents on Google Agent Engine.</p>
+
+<!-- ════════════════════════════════════════════ -->
+<h2>Agent Types (all deploy to Agent Engine)</h2>
+<!-- ════════════════════════════════════════════ -->
+
+<div class="card">
+  <div class="card-header">Five agent types — same deploy command, different agent.py structure</div>
+  <table>
+    <tr>
+      <th style="width:160px;">Type</th>
+      <th>ADK Class</th>
+      <th>Use When</th>
+      <th style="width:280px;">agent.py Pattern</th>
+    </tr>
+    <tr>
+      <td><span class="badge badge-blue">Standard</span></td>
+      <td><code>LlmAgent</code></td>
+      <td>Single agent with tools, LLM-driven decisions</td>
+      <td><code>root_agent = LlmAgent(tools=[...])</code></td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-purple">Coordinator</span></td>
+      <td><code>LlmAgent</code></td>
+      <td>Delegates to sub-agents based on intent</td>
+      <td><code>root_agent = LlmAgent(sub_agents=[a, b])</code></td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-green">Sequential</span></td>
+      <td><code>SequentialAgent</code></td>
+      <td>Fixed pipeline — each step passes state to next</td>
+      <td><code>root_agent = SequentialAgent(sub_agents=[...])</code></td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-cyan">Parallel</span></td>
+      <td><code>ParallelAgent</code></td>
+      <td>Independent tasks run concurrently</td>
+      <td><code>root_agent = ParallelAgent(sub_agents=[...])</code></td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-orange">Loop</span></td>
+      <td><code>LoopAgent</code></td>
+      <td>Iterative refinement with exit condition</td>
+      <td><code>root_agent = LoopAgent(sub_agents=[...], max_iterations=N)</code></td>
+    </tr>
+  </table>
+  <div style="margin-top:14px; font-size:0.78rem; color:var(--text-muted);">
+    All five deploy to Agent Engine via <code>uv run adk deploy agent_engine --agent-engine-id={id}</code>. Sub-agents are defined in the same <code>agent.py</code> file. The deploy command and pipeline are identical — only the agent.py structure changes.
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<h2>Deployment Models</h2>
+<!-- ════════════════════════════════════════════ -->
+
+<div class="card">
+  <div class="card-header">Model 1 is active. Models 2 &amp; 3 are planned for future development.</div>
+  <div class="fork-container">
+
+    <!-- Model 1: Standard ADK Agent -->
+    <div class="fork-branch">
+      <div class="fork-label blue">Model 1 — Standard ADK &nbsp;<span class="badge badge-green" style="font-size:0.6rem;">Active</span></div>
+      <div class="flow">
+        <div class="flow-box blue" style="width:100%;">
+          <div class="label">Developer writes agent</div>
+          <div class="name">agent.py</div>
+          <div class="detail" style="text-align:left;">
+            <code>root_agent = LlmAgent(...)</code><br>
+            tools.py — local Python functions<br>
+            prompts.py — system instructions<br>
+            mcp_tools.py — gateway MCP gateway
+          </div>
+        </div>
+
+        <div class="arrow-down">&#x25BC;</div>
+
+        <div class="flow-box blue" style="width:100%;">
+          <div class="label">Pipeline runs</div>
+          <div class="name">adk deploy agent_engine</div>
+          <div class="detail">
+            --agent-engine-id for update-in-place
+          </div>
+        </div>
+
+        <div class="arrow-down">&#x25BC;</div>
+
+        <div class="flow-box blue" style="width:100%;">
+          <div class="label">Deployed to</div>
+          <div class="name">Agent Engine (Vertex AI)</div>
+          <div class="detail" style="text-align:left;">
+            Managed runtime, no containers<br>
+            Reads requirements.txt for remote venv<br>
+            LLM via the gateway (openai/ prefix)
+          </div>
+        </div>
+
+        <div class="arrow-down">&#x25BC;</div>
+
+        <div class="flow-box blue" style="width:100%;">
+          <div class="label">Clients query via</div>
+          <div class="name">Vertex AI SDK / REST</div>
+          <div class="detail" style="text-align:left;">
+            reasoning_engines.query()<br>
+            reasoningEngines/{id}:query
+          </div>
+        </div>
+      </div>
+      <div style="font-size:0.72rem; color:var(--text-muted); margin-top:12px; text-align:center;">
+        <strong>Use case:</strong> Standard agents with no delegation
+      </div>
+    </div>
+
+    <div class="fork-divider"></div>
+
+    <!-- Model 2: A2A Client (Orchestrator) -->
+    <div class="fork-branch">
+      <div class="fork-label purple">Model 2 — A2A Client &nbsp;<span class="badge badge-yellow" style="font-size:0.6rem;">Future</span></div>
+      <div class="flow">
+        <div class="flow-box purple" style="width:100%;">
+          <div class="label">Developer writes orchestrator</div>
+          <div class="name">agent.py + a2a_client.py</div>
+          <div class="detail" style="text-align:left;">
+            <code>root_agent = LlmAgent(...)</code><br>
+            before_agent_callback — discover agents<br>
+            a2a_client.py — A2ACardResolver<br>
+            tools.py — includes send_task()
+          </div>
+        </div>
+
+        <div class="arrow-down">&#x25BC;</div>
+
+        <div class="flow-box purple" style="width:100%;">
+          <div class="label">Pipeline runs</div>
+          <div class="name">deploy_to_agent_engine.py</div>
+          <div class="detail">
+            agent_engines.create() API<br>
+            Passes REMOTE_AGENT_URLS env vars
+          </div>
+        </div>
+
+        <div class="arrow-down">&#x25BC;</div>
+
+        <div class="flow-box purple" style="width:100%;">
+          <div class="label">Deployed to</div>
+          <div class="name">Agent Engine (Vertex AI)</div>
+          <div class="detail" style="text-align:left;">
+            Same managed runtime<br>
+            Additional dep: a2a-sdk<br>
+            Fetches Agent Cards at runtime
+          </div>
+        </div>
+
+        <div class="arrow-down">&#x25BC;</div>
+
+        <div class="flow-box purple" style="width:100%;">
+          <div class="label">Delegates tasks to</div>
+          <div class="name">Remote A2A Servers</div>
+          <div class="detail" style="text-align:left;">
+            /.well-known/agent.json<br>
+            SendMessageRequest<br>
+            Cloud Run, external services, any org
+          </div>
+        </div>
+      </div>
+      <div style="font-size:0.72rem; color:var(--text-muted); margin-top:12px; text-align:center;">
+        <strong>Use case:</strong> Orchestrator that delegates to specialized agents
+      </div>
+    </div>
+
+    <div class="fork-divider"></div>
+
+    <!-- Model 3: A2A Server (Remote Agent) -->
+    <div class="fork-branch">
+      <div class="fork-label cyan">Model 3 — A2A Server &nbsp;<span class="badge badge-yellow" style="font-size:0.6rem;">Future</span></div>
+      <div class="flow">
+        <div class="flow-box cyan" style="width:100%;">
+          <div class="label">Developer writes A2A server</div>
+          <div class="name">__main__.py + main.py</div>
+          <div class="detail" style="text-align:left;">
+            __main__.py — uvicorn.run()<br>
+            agent_executor.py — AgentExecutor<br>
+            main.py — AgentCard definition<br>
+            Dockerfile
+          </div>
+        </div>
+
+        <div class="arrow-down">&#x25BC;</div>
+
+        <div class="flow-box cyan" style="width:100%;">
+          <div class="label">Pipeline runs</div>
+          <div class="name">gcloud run deploy</div>
+          <div class="detail">
+            --source agents/{name}/ --port=8080<br>
+            Then fixes HOST_OVERRIDE env var
+          </div>
+        </div>
+
+        <div class="arrow-down">&#x25BC;</div>
+
+        <div class="flow-box cyan" style="width:100%;">
+          <div class="label">Deployed to</div>
+          <div class="name">Cloud Run Service</div>
+          <div class="detail" style="text-align:left;">
+            Self-managed containers<br>
+            Serves AgentCard at /.well-known/<br>
+            No gateway MCP (uses direct SDK calls)
+          </div>
+        </div>
+
+        <div class="arrow-down">&#x25BC;</div>
+
+        <div class="flow-box cyan" style="width:100%;">
+          <div class="label">Discovered and called by</div>
+          <div class="name">A2A Clients (Model 2)</div>
+          <div class="detail" style="text-align:left;">
+            Any A2A-compatible agent<br>
+            Any framework (CrewAI, LangGraph, custom)<br>
+            Any organization
+          </div>
+        </div>
+      </div>
+      <div style="font-size:0.72rem; color:var(--text-muted); margin-top:12px; text-align:center;">
+        <strong>Use case:</strong> Specialized remote agents, framework-agnostic
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════ -->
+<h2>Comparison Table</h2>
+<!-- ════════════════════════════════════════════ -->
+
+<div class="card">
+  <table>
+    <tr>
+      <th>Aspect</th>
+      <th><span class="badge badge-blue">Model 1</span> Standard ADK</th>
+      <th><span class="badge badge-purple">Model 2</span> A2A Client</th>
+      <th><span class="badge badge-cyan">Model 3</span> A2A Server</th>
+    </tr>
+    <tr>
+      <td><strong>Hosting Platform</strong></td>
+      <td>Agent Engine (Vertex AI)</td>
+      <td>Agent Engine (Vertex AI)</td>
+      <td>Cloud Run</td>
+    </tr>
+    <tr>
+      <td><strong>Runtime</strong></td>
+      <td>Managed (no containers)</td>
+      <td>Managed (no containers)</td>
+      <td>Self-managed containers</td>
+    </tr>
+    <tr>
+      <td><strong>ADK Dependency</strong></td>
+      <td><span class="badge badge-green">Required</span></td>
+      <td><span class="badge badge-green">Required</span></td>
+      <td><span class="badge badge-red">Not Required</span></td>
+    </tr>
+    <tr>
+      <td><strong>Key Files</strong></td>
+      <td>agent.py, tools.py, prompts.py, mcp_tools.py</td>
+      <td>agent.py, tools.py, a2a_client.py</td>
+      <td>__main__.py, agent_executor.py, main.py, Dockerfile</td>
+    </tr>
+    <tr>
+      <td><strong>Deploy Command</strong></td>
+      <td><code>adk deploy agent_engine</code></td>
+      <td><code>python deploy_to_agent_engine.py</code></td>
+      <td><code>gcloud run deploy</code></td>
+    </tr>
+    <tr>
+      <td><strong>Additional Dependencies</strong></td>
+      <td>None</td>
+      <td>a2a-sdk</td>
+      <td>Framework-specific (CrewAI, LangGraph, etc.)</td>
+    </tr>
+    <tr>
+      <td><strong>gateway MCP Gateway</strong></td>
+      <td><span class="badge badge-green">Yes</span></td>
+      <td><span class="badge badge-green">Yes</span></td>
+      <td><span class="badge badge-red">No</span></td>
+    </tr>
+    <tr>
+      <td><strong>Agent Discovery</strong></td>
+      <td>N/A (no delegation)</td>
+      <td>Fetches /.well-known/agent.json at runtime</td>
+      <td>Serves /.well-known/agent.json</td>
+    </tr>
+    <tr>
+      <td><strong>Task Delegation</strong></td>
+      <td><span class="badge badge-red">No</span></td>
+      <td><span class="badge badge-green">Yes</span> (via SendMessageRequest)</td>
+      <td>Receives delegated tasks</td>
+    </tr>
+    <tr>
+      <td><strong>Framework Lock-In</strong></td>
+      <td>ADK only</td>
+      <td>ADK only</td>
+      <td><span class="badge badge-green">No</span> (any framework)</td>
+    </tr>
+    <tr>
+      <td><strong>Environment Variables</strong></td>
+      <td>Vertex AI config, gateway API token</td>
+      <td>REMOTE_AGENT_URLS + Vertex AI + gateway</td>
+      <td>HOST_OVERRIDE, framework-specific</td>
+    </tr>
+    <tr>
+      <td><strong>Dependency File</strong></td>
+      <td>requirements.txt</td>
+      <td>requirements.txt</td>
+      <td>requirements.txt + Dockerfile</td>
+    </tr>
+  </table>
+</div>
+
+
+<!-- ════════════════════════════════════════════ -->
+<h2>The Orchestrator Pattern (Model 2 ⟷ Model 3)</h2>
+<!-- ════════════════════════════════════════════ -->
+
+<div class="card">
+  <div class="card-header">How A2A Client Connects to A2A Server</div>
+  <div class="rel-diagram">
+    <div class="rel-box" style="border-color:var(--accent2);">
+      <strong style="color:var(--accent2);">Model 2: Orchestrator</strong>
+      <div class="small">Deployed to Agent Engine</div>
+      <div class="small">Has REMOTE_AGENT_URLS env var</div>
+    </div>
+    <div class="rel-arrow">
+      <span>&#x25B6;</span>
+      <span class="arr-label">1. Fetches Agent Card</span>
+    </div>
+    <div class="rel-box" style="border-color:var(--cyan);">
+      <strong style="color:var(--cyan);">/.well-known/agent.json</strong>
+      <div class="small">Served by Cloud Run (Model 3)</div>
+      <div class="small">Lists skills, capabilities, schema</div>
+    </div>
+  </div>
+
+  <div class="rel-diagram" style="margin-top:0;">
+    <div class="rel-box" style="border-color:var(--accent2);">
+      <strong style="color:var(--accent2);">Model 2: Orchestrator</strong>
+      <div class="small">before_agent_callback registers remote tools</div>
+      <div class="small">Calls send_task() when delegating</div>
+    </div>
+    <div class="rel-arrow">
+      <span>&#x25B6;</span>
+      <span class="arr-label">2. SendMessageRequest</span>
+    </div>
+    <div class="rel-box" style="border-color:var(--cyan);">
+      <strong style="color:var(--cyan);">Model 3: Remote Agent</strong>
+      <div class="small">Receives task via A2A protocol</div>
+      <div class="small">Executes with its own framework</div>
+    </div>
+  </div>
+
+  <div class="rel-diagram" style="margin-top:0;">
+    <div class="rel-box" style="border-color:var(--cyan);">
+      <strong style="color:var(--cyan);">Model 3: Remote Agent</strong>
+      <div class="small">Processes task, generates response</div>
+      <div class="small">Returns result via A2A protocol</div>
+    </div>
+    <div class="rel-arrow">
+      <span>&#x25C0;</span>
+      <span class="arr-label">3. Response</span>
+    </div>
+    <div class="rel-box" style="border-color:var(--accent2);">
+      <strong style="color:var(--accent2);">Model 2: Orchestrator</strong>
+      <div class="small">Receives result from remote agent</div>
+      <div class="small">Continues its own workflow</div>
+    </div>
+  </div>
+
+  <div class="callout cyan">
+    <strong>Key Insight:</strong> Model 2 agents can delegate to Model 3 agents built with ANY framework (CrewAI, LangGraph, custom). The A2A protocol is the universal interface. Model 3 agents can be owned by other teams, other orgs, or external vendors — as long as they serve an Agent Card and implement the A2A protocol.
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════ -->
+<h2>File Structure Comparison</h2>
+<!-- ════════════════════════════════════════════ -->
+
+<div class="fork-container">
+  <div class="fork-branch">
+    <div class="fork-label blue">Model 1 Structure</div>
+    <div class="card" style="width:100%;">
+      <div class="tree">
+<span class="dir">agents/{name}/</span><br>
+&nbsp;&nbsp;<span class="file">agent.py</span> <span class="comment">&larr; root_agent = LlmAgent(...)</span><br>
+&nbsp;&nbsp;<span class="file">tools.py</span> <span class="comment">&larr; typed Python functions</span><br>
+&nbsp;&nbsp;<span class="file">prompts.py</span> <span class="comment">&larr; system instructions (NO curly braces)</span><br>
+&nbsp;&nbsp;<span class="file">config.py</span> <span class="comment">&larr; settings dataclass</span><br>
+&nbsp;&nbsp;<span class="file">mcp_tools.py</span> <span class="comment">&larr; create_gateway_toolset()</span><br>
+&nbsp;&nbsp;<span class="file">.env</span> <span class="comment">&larr; Vertex AI + gateway token</span><br>
+&nbsp;&nbsp;<span class="file">requirements.txt</span> <span class="comment">&larr; Agent Engine deps</span><br>
+      </div>
+    </div>
+  </div>
+
+  <div class="fork-divider"></div>
+
+  <div class="fork-branch">
+    <div class="fork-label purple">Model 2 Structure</div>
+    <div class="card" style="width:100%;">
+      <div class="tree">
+<span class="dir">agents/{name}/</span><br>
+&nbsp;&nbsp;<span class="file">agent.py</span> <span class="comment">&larr; root_agent + before_agent_callback</span><br>
+&nbsp;&nbsp;<span class="file new">a2a_client.py</span> <span class="comment">&larr; A2ACardResolver, remote connections</span><br>
+&nbsp;&nbsp;<span class="file">tools.py</span> <span class="comment">&larr; includes send_task() for delegation</span><br>
+&nbsp;&nbsp;<span class="file">prompts.py</span> <span class="comment">&larr; system instructions</span><br>
+&nbsp;&nbsp;<span class="file">config.py</span> <span class="comment">&larr; settings + REMOTE_AGENT_URLS</span><br>
+&nbsp;&nbsp;<span class="file">mcp_tools.py</span> <span class="comment">&larr; create_gateway_toolset()</span><br>
+&nbsp;&nbsp;<span class="file">.env</span> <span class="comment">&larr; Vertex AI + gateway + agent URLs</span><br>
+&nbsp;&nbsp;<span class="file">requirements.txt</span> <span class="comment">&larr; + a2a-sdk</span><br>
+      </div>
+    </div>
+  </div>
+
+  <div class="fork-divider"></div>
+
+  <div class="fork-branch">
+    <div class="fork-label cyan">Model 3 Structure</div>
+    <div class="card" style="width:100%;">
+      <div class="tree">
+<span class="dir">agents/{name}/</span><br>
+&nbsp;&nbsp;<span class="file new">__main__.py</span> <span class="comment">&larr; uvicorn.run(A2AStarletteApplication)</span><br>
+&nbsp;&nbsp;<span class="file new">agent_executor.py</span> <span class="comment">&larr; AgentExecutor.execute()</span><br>
+&nbsp;&nbsp;<span class="file new">main.py</span> <span class="comment">&larr; AgentCard definition</span><br>
+&nbsp;&nbsp;<span class="file new">Dockerfile</span> <span class="comment">&larr; container image definition</span><br>
+&nbsp;&nbsp;<span class="file">requirements.txt</span> <span class="comment">&larr; framework-specific deps</span><br>
+&nbsp;&nbsp;<span class="comment">(NO agent.py, NO mcp_tools.py)</span><br>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════ -->
+<h2>Key Differences Summary</h2>
+<!-- ════════════════════════════════════════════ -->
+
+<div class="fork-container">
+  <div class="fork-branch">
+    <div class="card" style="width:100%;">
+      <div class="card-header"><span class="badge badge-blue">Model 1</span> Standard ADK Agent</div>
+      <div style="font-size:0.82rem; color:var(--text-muted); line-height:1.8;">
+        <strong>Same as both:</strong> Agent Engine deployment, Vertex AI SDK queries<br>
+        <strong>Different:</strong> No delegation, no A2A protocol, simplest structure<br>
+        <strong>When to use:</strong> Self-contained agents with no need to call other agents
+      </div>
+    </div>
+  </div>
+
+  <div class="fork-divider"></div>
+
+  <div class="fork-branch">
+    <div class="card" style="width:100%;">
+      <div class="card-header"><span class="badge badge-purple">Model 2</span> A2A Client (Orchestrator)</div>
+      <div style="font-size:0.82rem; color:var(--text-muted); line-height:1.8;">
+        <strong>Same as Model 1:</strong> Agent Engine, ADK, gateway MCP<br>
+        <strong>Different from Model 1:</strong> a2a_client.py, before_agent_callback, send_task(), remote agent URLs<br>
+        <strong>When to use:</strong> Orchestrators that delegate specialized tasks to remote agents
+      </div>
+    </div>
+  </div>
+
+  <div class="fork-divider"></div>
+
+  <div class="fork-branch">
+    <div class="card" style="width:100%;">
+      <div class="card-header"><span class="badge badge-cyan">Model 3</span> A2A Server (Remote Agent)</div>
+      <div style="font-size:0.82rem; color:var(--text-muted); line-height:1.8;">
+        <strong>Same as both:</strong> None — completely different architecture<br>
+        <strong>Different:</strong> Cloud Run, Dockerfile, no ADK, no gateway, framework-agnostic, serves Agent Card<br>
+        <strong>When to use:</strong> Specialized agents that other agents call remotely, or when using non-ADK frameworks
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════ -->
+<h2>Tech Stack Tags</h2>
+<!-- ════════════════════════════════════════════ -->
+
+<div class="card">
+  <div class="card-header"><span class="badge badge-blue">Model 1</span> Standard ADK Agent</div>
+  <div class="tag-row">
+    <span class="tag">Python 3.13+</span>
+    <span class="tag">Google ADK</span>
+    <span class="tag">Agent Engine (Vertex AI)</span>
+    <span class="tag">gateway LLM Gateway</span>
+    <span class="tag">gateway MCP Gateway</span>
+    <span class="tag">requirements.txt</span>
+    <span class="tag">No containers</span>
+    <span class="tag">Vertex AI SDK</span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><span class="badge badge-purple">Model 2</span> A2A Client (Orchestrator)</div>
+  <div class="tag-row">
+    <span class="tag">Python 3.13+</span>
+    <span class="tag">Google ADK</span>
+    <span class="tag">Agent Engine (Vertex AI)</span>
+    <span class="tag">gateway LLM Gateway</span>
+    <span class="tag">gateway MCP Gateway</span>
+    <span class="tag">a2a-sdk</span>
+    <span class="tag">A2A Protocol</span>
+    <span class="tag">Agent Card Discovery</span>
+    <span class="tag">before_agent_callback</span>
+    <span class="tag">SendMessageRequest</span>
+    <span class="tag">REMOTE_AGENT_URLS</span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><span class="badge badge-cyan">Model 3</span> A2A Server (Remote Agent)</div>
+  <div class="tag-row">
+    <span class="tag">Python 3.13+</span>
+    <span class="tag">Cloud Run</span>
+    <span class="tag">Docker</span>
+    <span class="tag">A2A Protocol</span>
+    <span class="tag">Agent Card (/.well-known/agent.json)</span>
+    <span class="tag">Framework-agnostic</span>
+    <span class="tag">CrewAI / LangGraph / Custom</span>
+    <span class="tag">uvicorn</span>
+    <span class="tag">A2AStarletteApplication</span>
+    <span class="tag">AgentExecutor</span>
+    <span class="tag">No ADK</span>
+    <span class="tag">No gateway</span>
+  </div>
+</div>
+
+
+<div class="footer">
+  Agent Deployment Models
+</div>
+
+</body>
+</html>

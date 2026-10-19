@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Service Reference Architecture</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #242836;
+    --border: #2e3345;
+    --text: #e1e4ed;
+    --text-muted: #8b90a0;
+    --accent: #6c8aff;
+    --accent2: #a78bfa;
+    --green: #34d399;
+    --orange: #fb923c;
+    --red: #f87171;
+    --cyan: #22d3ee;
+    --yellow: #fbbf24;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 1rem;
+    margin-bottom: 48px;
+  }
+  h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 20px;
+    margin-top: 56px;
+  }
+  h2:first-of-type { margin-top: 0; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    margin-bottom: 24px;
+  }
+  .card-header {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+
+  /* ── Architecture Diagram ── */
+  .arch-diagram {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    align-items: center;
+  }
+  .arch-row {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .arch-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 24px;
+    text-align: center;
+    min-width: 140px;
+  }
+  .arch-box .label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .arch-box .name {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .arch-box .detail {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .arch-box.blue { border-color: var(--accent); box-shadow: 0 0 20px rgba(108,138,255,0.1); }
+  .arch-box.purple { border-color: var(--accent2); box-shadow: 0 0 20px rgba(167,139,250,0.1); }
+  .arch-box.green { border-color: var(--green); box-shadow: 0 0 20px rgba(52,211,153,0.1); }
+  .arch-box.orange { border-color: var(--orange); box-shadow: 0 0 20px rgba(251,146,60,0.1); }
+  .arch-box.cyan { border-color: var(--cyan); box-shadow: 0 0 20px rgba(34,211,238,0.1); }
+
+  .arrow-down {
+    display: flex;
+    justify-content: center;
+    padding: 8px 0;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+  }
+
+  /* ── Pipeline Flow ── */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    overflow-x: auto;
+    padding: 8px 0;
+    justify-content: center;
+  }
+  .pipe-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 100px;
+  }
+  .pipe-dot {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .pipe-dot.blue { background: rgba(108,138,255,0.15); color: var(--accent); border: 2px solid var(--accent); }
+  .pipe-dot.green { background: rgba(52,211,153,0.15); color: var(--green); border: 2px solid var(--green); }
+  .pipe-dot.purple { background: rgba(167,139,250,0.15); color: var(--accent2); border: 2px solid var(--accent2); }
+  .pipe-dot.orange { background: rgba(251,146,60,0.15); color: var(--orange); border: 2px solid var(--orange); }
+  .pipe-label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 8px;
+    text-align: center;
+    max-width: 90px;
+  }
+  .pipe-connector {
+    height: 2px;
+    width: 32px;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+  .pipe-gate {
+    height: 2px;
+    width: 32px;
+    background: repeating-linear-gradient(90deg, var(--orange), var(--orange) 4px, transparent 4px, transparent 8px);
+    flex-shrink: 0;
+  }
+
+  /* ── File Tree ── */
+  .tree {
+    font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 0.82rem;
+    line-height: 1.8;
+    color: var(--text-muted);
+  }
+  .tree .dir { color: var(--accent); font-weight: 600; }
+  .tree .file { color: var(--text); }
+  .tree .comment { color: #555b6e; }
+  .tree .hl { color: var(--green); }
+
+  /* ── Grid ── */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 900px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    body { padding: 20px; }
+  }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .badge-blue { background: rgba(108,138,255,0.15); color: var(--accent); }
+  .badge-green { background: rgba(52,211,153,0.15); color: var(--green); }
+  .badge-purple { background: rgba(167,139,250,0.15); color: var(--accent2); }
+  .badge-orange { background: rgba(251,146,60,0.15); color: var(--orange); }
+  .badge-cyan { background: rgba(34,211,238,0.15); color: var(--cyan); }
+  .badge-yellow { background: rgba(251,191,36,0.15); color: var(--yellow); }
+  .badge-red { background: rgba(248,113,113,0.15); color: var(--red); }
+
+  /* ── Table ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  th {
+    text-align: left;
+    color: var(--text-muted);
+    font-weight: 600;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  tr:last-child td { border-bottom: none; }
+
+  .tag-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    font-size: 0.72rem;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+
+  /* ── Phase cards ── */
+  .phase-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-right: 10px;
+    flex-shrink: 0;
+  }
+  .phase-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .phase-items {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    padding-left: 38px;
+    line-height: 1.8;
+  }
+
+  .footer {
+    margin-top: 56px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<h1>Agent Service Reference Architecture</h1>
+<p class="subtitle">Standardized template for deploying Google ADK agents to Agent Engine via ADO pipelines — matching our existing microservice patterns for CI/CD, IaC, and environment promotion.</p>
+
+<!-- ════════════════════════════════════════════ -->
+<h2>Architecture</h2>
+<!-- ════════════════════════════════════════════ -->
+
+<div class="card">
+  <div class="arch-diagram">
+    <div class="arch-row">
+      <div class="arch-box blue">
+        <div class="label">Developer</div>
+        <div class="name">Feature Branch → PR</div>
+        <div class="detail">One repo per agent</div>
+      </div>
+    </div>
+
+    <div class="arrow-down">▼</div>
+
+    <div class="arch-row">
+      <div class="arch-box purple" style="min-width:280px;">
+        <div class="label">CI / CD</div>
+        <div class="name">Azure DevOps Pipeline</div>
+        <div class="detail">PR: lint + type check + test + IaC plan</div>
+      </div>
+    </div>
+
+    <div class="arrow-down">▼</div>
+
+    <div class="arch-row">
+      <div class="arch-box orange">
+        <div class="label">Auth</div>
+        <div class="name">Workload Identity Federation</div>
+        <div class="detail">No service account keys</div>
+      </div>
+    </div>
+
+    <div class="arrow-down">▼</div>
+
+    <div class="arch-row">
+      <div class="arch-box cyan">
+        <div class="label">Deploy</div>
+        <div class="name"><code style="font-size:0.85rem;">adk deploy agent_engine</code></div>
+        <div class="detail">Preinstalled on build agents · minor-version pinned</div>
+      </div>
+    </div>
+
+    <div class="arrow-down">▼</div>
+
+    <div class="arch-row">
+      <div class="arch-box green" style="min-width:280px;">
+        <div class="label">Runtime</div>
+        <div class="name">Google Agent Engine</div>
+        <div class="detail">Managed by Vertex AI · No containers · No infra to maintain</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tag-row">
+    <span class="tag">Python 3.13+</span>
+    <span class="tag">Google ADK</span>
+    <span class="tag">Vertex AI</span>
+    <span class="tag">Terragrunt IaC</span>
+    <span class="tag">Sentry</span>
+    <span class="tag">WIF Auth</span>
+    <span class="tag">UV Package Manager</span>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<h2>Environment Promotion</h2>
+<!-- ════════════════════════════════════════════ -->
+
+<div class="card">
+  <div class="pipeline">
+    <div class="pipe-stage">
+      <div class="pipe-dot blue">PR</div>
+      <div class="pipe-label">Lint · Test · IaC Plan</div>
+    </div>
+    <div class="pipe-connector"></div>
+    <div class="pipe-stage">
+      <div class="pipe-dot green">✓</div>
+      <div class="pipe-label">Merge to main</div>
+    </div>
+    <div class="pipe-connector"></div>
+    <div class="pipe-stage">
+      <div class="pipe-dot purple">D</div>
+      <div class="pipe-label">Dev</div>
+    </div>
+    <div class="pipe-gate"></div>
+    <div class="pipe-stage">
+      <div class="pipe-dot purple">T</div>
+      <div class="pipe-label">Test</div>
+    </div>
+    <div class="pipe-gate"></div>
+    <div class="pipe-stage">
+      <div class="pipe-dot purple">S</div>
+      <div class="pipe-label">Sand</div>
+    </div>
+    <div class="pipe-gate"></div>
+    <div class="pipe-stage">
+      <div class="pipe-dot orange">P</div>
+      <div class="pipe-label">Prod</div>
+    </div>
+  </div>
+  <div style="text-align:center; margin-top:12px;">
+    <span style="font-size:0.72rem; color:var(--text-muted);">
+      <span style="display:inline-block;width:24px;height:2px;background:repeating-linear-gradient(90deg, var(--orange), var(--orange) 4px, transparent 4px, transparent 8px);vertical-align:middle;margin-right:6px;"></span>
+      = Manual validation gate &nbsp;&nbsp;·&nbsp;&nbsp; Rollback = rerun pipeline on older commit
+    </span>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<h2>Repo Structure</h2>
+<!-- ════════════════════════════════════════════ -->
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-header">Agent Code + Pipelines</div>
+    <div class="tree">
+<span class="dir">agents/</span><br>
+&nbsp;&nbsp;<span class="dir">{agent-name}/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="file hl">agent.py</span> <span class="comment">← root_agent (ADK entry point)</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">tools.py</span> <span class="comment">← tool functions</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">prompts.py</span> <span class="comment">← system instructions</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">config.py</span> <span class="comment">← settings dataclass</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">.env</span> <span class="comment">← Vertex AI config</span><br>
+<br>
+<span class="dir">ADOYaml/</span><br>
+&nbsp;&nbsp;<span class="file">fullenv-pipeline.yml</span> <span class="comment">← deploy all envs</span><br>
+&nbsp;&nbsp;<span class="file">agent-pull-request.yml</span> <span class="comment">← PR validation</span><br>
+&nbsp;&nbsp;<span class="file">dev-pipeline.yml</span> <span class="comment">← manual dev deploy</span><br>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">IaC + Tests + Tooling</div>
+    <div class="tree">
+<span class="dir">InfrastructureAsCode/</span><br>
+&nbsp;&nbsp;<span class="dir">{service-prefix}/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">app.hcl</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">{dev,test,sand,prod}/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">env.hcl · project.hcl</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">global/service_account/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file hl">terragrunt.hcl</span><br>
+<br>
+<span class="dir">tests/</span><br>
+&nbsp;&nbsp;<span class="dir">unit/</span> <span class="comment">← runs in every PR</span><br>
+&nbsp;&nbsp;<span class="dir">integration/</span> <span class="comment">← requires GCP creds</span><br>
+<br>
+<span class="dir">bin/</span> <span class="comment">← lint · test · deploy scripts</span><br>
+<span class="file">pyproject.toml</span><br>
+<span class="file">template.config.yml</span><br>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<h2>How It Works</h2>
+<!-- ════════════════════════════════════════════ -->
+
+<div class="card">
+  <table>
+    <tr>
+      <th style="width:140px;">Step</th>
+      <th>What Happens</th>
+    </tr>
+    <tr>
+      <td><span class="badge badge-blue">Clone</span></td>
+      <td>Copy template, replace 5 tokens (agent name, service prefix, display name), rename directories</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-purple">Build Agent</span></td>
+      <td>Write tools in <code>tools.py</code>, instructions in <code>prompts.py</code>, wire into <code>agent.py</code></td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-green">Test Local</span></td>
+      <td><code>adk web agents/</code> — interactive dev UI at localhost:8000</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-orange">PR</span></td>
+      <td>Pipeline runs ruff + pyright + pytest + IaC plan</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-cyan">Deploy</span></td>
+      <td>Merge → IaC apply → <code>adk deploy agent_engine</code> → manual gates between envs</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<h2>Infrastructure</h2>
+<!-- ════════════════════════════════════════════ -->
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-header">Shared GCP Projects (all agents)</div>
+    <table>
+      <tr><td><code>{SERVICE_PREFIX}-dev-project</code></td><td><span class="badge badge-green">Dev</span></td></tr>
+      <tr><td><code>{SERVICE_PREFIX}-test-project</code></td><td><span class="badge badge-blue">Test</span></td></tr>
+      <tr><td><code>{SERVICE_PREFIX}-sand-project</code></td><td><span class="badge badge-purple">Sand</span></td></tr>
+      <tr><td><code>{SERVICE_PREFIX}-prod-project</code></td><td><span class="badge badge-orange">Prod</span></td></tr>
+    </table>
+    <p style="font-size:0.72rem; color:var(--text-muted); margin-top:10px;">Per-agent isolation via dedicated service accounts + least-privilege IAM.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-header">IaC — Fully Self-Contained</div>
+    <table>
+      <tr>
+        <th>Resource</th>
+        <th>Managed By</th>
+      </tr>
+      <tr>
+        <td>Service Account + IAM</td>
+        <td><code>InfrastructureAsCode/</code> in each agent repo</td>
+      </tr>
+      <tr>
+        <td>GCS state backend</td>
+        <td>Auto-created by Terragrunt per env</td>
+      </tr>
+    </table>
+    <p style="font-size:0.72rem; color:var(--text-muted); margin-top:10px;">No terraform-live dependency. Each agent repo owns its own IaC with a standalone <code>root.hcl</code>.</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<h2>Naming Convention</h2>
+<!-- ════════════════════════════════════════════ -->
+
+<div class="card" style="border-color: var(--accent); box-shadow: 0 0 20px rgba(108,138,255,0.08);">
+  <div style="font-size:0.75rem; color:var(--accent); font-weight:600; letter-spacing:1px; text-transform:uppercase; margin-bottom:12px;">Convention: &lt;AgentName&gt;-Agent</div>
+  <table>
+    <tr>
+      <th>What</th>
+      <th>Pattern</th>
+      <th>Example</th>
+    </tr>
+    <tr>
+      <td>ADO Repo</td>
+      <td><code>&lt;AgentName&gt;-Agent</code></td>
+      <td>DataAnalyzer-Agent</td>
+    </tr>
+    <tr>
+      <td>ADK Agent Name</td>
+      <td><code>&lt;agent_name&gt;</code> <span style="color:var(--orange); font-size:0.72rem;">(underscores only)</span></td>
+      <td>data_analyzer</td>
+    </tr>
+    <tr>
+      <td>IaC Prefix</td>
+      <td><code>&lt;agentname&gt;</code> <span style="color:var(--text-muted); font-size:0.72rem;">(no separators)</span></td>
+      <td>dataanalyzer</td>
+    </tr>
+    <tr>
+      <td>Display Name</td>
+      <td><code>&lt;Agent Name&gt; Agent</code></td>
+      <td>Data Analyzer Agent</td>
+    </tr>
+    <tr>
+      <td>Service Account</td>
+      <td><code>agent-&lt;prefix&gt;@agents-{env}-project</code></td>
+      <td>agent-dataanalyzer@{SERVICE_PREFIX}-prod-project</td>
+    </tr>
+    <tr>
+      <td>ADO Pipeline</td>
+      <td><code>&lt;AgentName&gt;-Agent-BuildAndDeploy</code></td>
+      <td>DataAnalyzer-Agent-BuildAndDeploy</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<h2>Rollout Plan</h2>
+<!-- ════════════════════════════════════════════ -->
+
+<div class="card">
+  <div class="phase-title">
+    <span class="phase-num" style="background:rgba(52,211,153,0.15); color:var(--green);">1</span>
+    Agent Service Template <span class="badge badge-green" style="margin-left:8px;">Complete</span>
+  </div>
+  <div class="phase-items">
+    Self-contained repo: agent code scaffold, ADO pipelines, standalone IaC, tests, and tooling.<br>
+    This repo IS the first agent. Clone it for every new agent going forward.
+  </div>
+</div>
+
+<div class="card">
+  <div class="phase-title">
+    <span class="phase-num" style="background:rgba(251,146,60,0.15); color:var(--orange);">2</span>
+    GCP Projects + Prerequisites <span class="badge badge-yellow" style="margin-left:8px;">Needs GCP Admin</span>
+  </div>
+  <div class="phase-items">
+    Create GCP projects · Enable Vertex AI API · Create WIF pools + OIDC provider · Create GCS staging buckets<br>
+    Pin <code>google-adk</code> on terraform-builds agent image (Packer update, minor version pin until ADK 1.0)
+  </div>
+</div>
+
+<div class="card">
+  <div class="phase-title">
+    <span class="phase-num" style="background:rgba(251,146,60,0.15); color:var(--orange);">3</span>
+    Shared Pipeline Template <span class="badge badge-yellow" style="margin-left:8px;">Needs SharedPlatform PR</span>
+  </div>
+  <div class="phase-items">
+    <code>agent-engine-deploy-template.yml</code> in SharedPlatform — reusable WIF auth + <code>adk deploy</code> stage.<br>
+    Replaces inline WIF auth with a single template reference per environment.
+  </div>
+</div>
+
+<div class="card">
+  <div class="phase-title">
+    <span class="phase-num" style="background:rgba(108,138,255,0.15); color:var(--accent);">4</span>
+    First Deploy <span class="badge badge-blue" style="margin-left:8px;">After Phases 2-3</span>
+  </div>
+  <div class="phase-items">
+    Replace tokens in this repo, wire ADO pipelines, apply IaC, deploy to dev.<br>
+    End-to-end proof: PR → merge → agent running in Agent Engine.
+  </div>
+</div>
+
+<div class="footer">
+  Agent Service Reference Architecture
+</div>
+
+</body>
+</html>

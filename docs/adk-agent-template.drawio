@@ -1,0 +1,149 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="Generation flow" id="generation">
+    <mxGraphModel dx="1200" dy="900" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="t1" value="This template repo" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;dashPattern=8 8;fillColor=none;strokeColor=#6c8ebf;verticalAlign=top;fontSize=11;fontColor=#3b5a80;" vertex="1" parent="1">
+          <mxGeometry x="30" y="80" width="300" height="420" as="geometry" />
+        </mxCell>
+        <mxCell id="t2" value="LLM session (the scaffolder)" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;dashPattern=8 8;fillColor=none;strokeColor=#82b366;verticalAlign=top;fontSize=11;fontColor=#4a7a3a;" vertex="1" parent="1">
+          <mxGeometry x="370" y="80" width="330" height="700" as="geometry" />
+        </mxCell>
+        <mxCell id="t3" value="Generated agent repo" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;dashPattern=8 8;fillColor=none;strokeColor=#d6b656;verticalAlign=top;fontSize=11;fontColor=#8a7320;" vertex="1" parent="1">
+          <mxGeometry x="740" y="80" width="330" height="420" as="geometry" />
+        </mxCell>
+
+        <mxCell id="prompt" value="EXECUTION_PROMPT.md&#xa;430 lines, 10 steps, 4 gates, 18 rules" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="55" y="115" width="250" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="cfg" value="template.config.yml&#xa;5 tokens + substitution ORDER&#xa;&lt;i&gt;longest first: AGENT_NAME is a&#xa;substring of AGENT_NAME_LOWER&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="55" y="185" width="250" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="skel" value="Skeleton&#xa;agents/{{AGENT_NAME_LOWER}}/&#xa;InfrastructureAsCode/{{SERVICE_PREFIX}}/&#xa;ADOYaml/ · bin/ · tests/ · docs/" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="55" y="275" width="250" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="e2e" value="bin/e2e.py&#xa;&lt;i&gt;asserts the template's own invariants:&#xa;token set, order safety, ADK contract,&#xa;dep sync, no tracked .env, no dangling refs&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="55" y="370" width="250" height="75" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s1" value="Step 1 — intake (7 questions in one message)&#xa;derives AGENT_NAME / _LOWER / SERVICE_PREFIX /&#xa;DISPLAY_NAME + the three GCP project IDs" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="390" y="115" width="290" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="g1" value="◆ GATE 1 — design approved by a human" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="390" y="180" width="290" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="s2" value="Steps 2-2.4 — scaffold&#xa;clone repo · copy (3 exclusions) · substitute&#xa;longest-first · rename the 2 token dirs ·&#xa;grep -r '{{' must return nothing ·&#xa;prune unused environments and repair dependsOn" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="390" y="215" width="290" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" value="Steps 3-5 — write the agent, commit, run locally&#xa;prompts · tools (real, not stubs) · tool_filter ·&#xa;tests · sync requirements.txt · adk web" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="390" y="305" width="290" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="g2" value="◆ GATE 2 — human exercises it at localhost:8000" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="390" y="370" width="290" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="s4" value="Steps 6-8 — GCP setup and first deploy&#xa;enable APIs · terragrunt apply SA → bucket →&#xa;secret shell · gcloud adds the secret VALUE ·&#xa;deploy to dev · capture the engine id · REST test" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="390" y="405" width="290" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="g3" value="◆ GATE 3 — resource id + test output shown" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="390" y="485" width="290" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="s5" value="Steps 9-10 — pipelines and prod checklist&#xa;az pipelines create ×3 (--skip-first-run) ·&#xa;WIF pool/provider/binding · pipeline variables" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="390" y="520" width="290" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="g4" value="◆ GATE 4 — full written handoff, not &quot;done&quot;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="390" y="585" width="290" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="gatenote" value="Gates sit exactly where a human must verify something&#xa;a machine cannot. Between gates the session runs freely." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="390" y="625" width="290" height="45" as="geometry" />
+        </mxCell>
+
+        <mxCell id="repo" value="&lt;AgentName&gt;-Agent repo&#xa;agents/&lt;agent_name&gt;/ — ADK package&#xa;InfrastructureAsCode/&lt;prefix&gt;/ — terragrunt&#xa;ADOYaml/ — 3 pipelines" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="765" y="115" width="280" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="pr" value="PR pipeline&#xa;ruff · pyright · pytest+coverage&#xa;terragrunt plan for TOUCHED modules only" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="765" y="210" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="full" value="Full-env pipeline&#xa;IaC apply dev→test→prod, then&#xa;deploy dev →[gate]→ test →[gate]→ prod&#xa;&lt;i&gt;deployment event markers around prod&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="765" y="290" width="280" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="ae" value="Vertex AI Agent Engine&#xa;&lt;i&gt;adk deploy agent_engine — no Docker.&#xa;Remote venv built from requirements.txt.&#xa;No versioning: --agent_engine_id or you&#xa;get a duplicate. Rollback = older commit.&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="765" y="380" width="280" height="85" as="geometry" />
+        </mxCell>
+
+        <mxCell id="wif" value="WIF — no service-account keys anywhere&#xa;AzureCLI@2 mints an Entra JWT (issecret=true)&#xa;→ POST sts.googleapis.com/v1/token  (RFC 8693)&#xa;→ access_token to /tmp/gcp_token&#xa;→ gcloud config set auth/access_token_file" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="740" y="530" width="330" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="gw" value="LLM + MCP gateway (OpenAI-compatible)&#xa;&lt;i&gt;model=&quot;openai/&lt;id&gt;&quot; via ADK LiteLlm. The openai/&#xa;prefix deliberately bypasses Agent Engine's&#xa;GOOGLE_GENAI_USE_VERTEXAI injection, which would&#xa;force Vertex-native routing and break this path.&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="740" y="635" width="330" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="sm" value="Secret Manager&#xa;&lt;i&gt;terragrunt owns the secret SHELL;&#xa;gcloud adds the VALUE — so the payload&#xa;never enters Terraform state&lt;/i&gt;" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;html=1;whiteSpace=wrap;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="55" y="540" width="275" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="prompt" target="s1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2b" value="read" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=10;" edge="1" parent="1" source="cfg" target="s2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="copy" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=10;" edge="1" parent="1" source="skel" target="s2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="s1" target="g1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="g1" target="s2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="s2" target="s3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="s3" target="g2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="g2" target="s4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="s4" target="g3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="g3" target="s5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="s5" target="g4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" value="produces" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" edge="1" parent="1" source="s2" target="repo">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e13" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="repo" target="pr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e14" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="pr" target="full">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e15" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="full" target="ae">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e16" value="auth" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=10;" edge="1" parent="1" source="wif" target="full">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e17" value="every LLM + MCP call" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" edge="1" parent="1" source="ae" target="gw">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e18" value="key read at startup" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=10;" edge="1" parent="1" source="sm" target="gw">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e19" value="verifies" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=10;" edge="1" parent="1" source="e2e" target="skel">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="note" value="The IaC tree IS the configuration: app.hcl takes app_id from its own directory name, env.hcl takes environment from its own, region.hcl derives the region and its short forms. Rename a directory, rename the resources.&#xa;Remote state prefix comes from path_relative_to_include(), so each leaf module gets its own state file with no extra wiring." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;align=left;spacingLeft=10;fontSize=10;verticalAlign=top;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="30" y="800" width="1040" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,8 @@
+google-adk[extensions]
+google-cloud-aiplatform>=1.155.0
+litellm
+mcp>=1.27.2
+sentry-sdk
+python-dotenv
+python-json-logger
+pydantic

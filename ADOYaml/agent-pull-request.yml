@@ -1,0 +1,143 @@
+name: $(Build.BuildId) - {{AGENT_NAME}}-PRBuild
+
+variables:
+  serviceAbbreviation: "{{SERVICE_PREFIX}}"
+  GCP_WIF_PROVIDER_ID: "azuredevops-wlif-provider"
+  GCP_PROJECT_NUMBER_DEV: "TBD"
+  GCP_WIF_POOL_ID_DEV: "agents-dev-wlif-pool"
+  GCP_PROJECT_NUMBER_TEST: "TBD"
+  GCP_WIF_POOL_ID_TEST: "agents-test-wlif-pool"
+  GCP_PROJECT_NUMBER_SAND: "TBD"
+  GCP_WIF_POOL_ID_SAND: "agents-sand-wlif-pool"
+  GCP_PROJECT_NUMBER_PROD: "TBD"
+  GCP_WIF_POOL_ID_PROD: "agents-prod-wlif-pool"
+
+resources:
+  repositories:
+    - repository: SharedPlatform
+      type: git
+      name: YourProject/SharedPlatform
+      ref: refs/tags/iac-review-v1.0.0
+
+trigger: none
+
+pr:
+  branches:
+    include:
+      - main
+
+stages:
+  # =============================================================================
+  # STAGE 1: Unit Tests, Lint, Type Check
+  # =============================================================================
+  - stage: RunUnitTestsStage
+    displayName: "Unit Tests & Quality"
+    pool: node-builds
+    jobs:
+      - job: UnitTestsJob
+        displayName: "Lint, Type Check, Tests"
+        steps:
+          - checkout: self
+            fetchDepth: 2
+            fetchTags: false
+
+          - task: UsePythonVersion@0
+            displayName: "Use Python 3.13"
+            inputs:
+              versionSpec: "3.13"
+
+          - bash: pip install uv
+            displayName: "Install UV"
+
+          # Not --frozen: the lockfile is generated in the repo this template
+          # produces, because uv cannot lock a project whose name is still an
+          # unsubstituted token. Switch to `uv sync --frozen` once uv.lock exists.
+          - bash: uv sync
+            displayName: "Install dependencies"
+
+          - bash: bin/check-lint-and-format.sh
+            displayName: "Ruff lint & format check"
+
+          - bash: bin/check-types.sh
+            displayName: "Pyright type check"
+
+          - bash: bin/unit-tests-with-coverage.sh
+            displayName: "Run unit tests"
+
+          - task: PublishTestResults@2
+            displayName: "Publish test results"
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: "JUnit"
+              testResultsFiles: "test-results.xml"
+              testRunTitle: "{{AGENT_NAME}} PR Tests"
+
+          - task: PublishCodeCoverageResults@2
+            displayName: "Publish coverage"
+            condition: succeededOrFailed()
+            inputs:
+              codeCoverageTool: "Cobertura"
+              summaryFileLocation: "coverage.xml"
+
+  # =============================================================================
+  # STAGES 2-5: IaC Change Detection & Plan
+  # =============================================================================
+  - template: ADOYaml/templates/detect-iac-changes-stage-template.yml@SharedPlatform
+    parameters:
+      SERVICE_PREFIX: "$(serviceAbbreviation)"
+      ENVIRONMENTS: ["dev", "test", "sand", "prod"]
+      DEPENDS_ON:
+        - RunUnitTestsStage
+      CONDITION: "succeeded()"
+
+  - template: ADOYaml/templates/wif-terragrunt-stage-template.yml@SharedPlatform
+    parameters:
+      ENV_NAME: "dev"
+      GCP_PROJECT_NUMBER: $(GCP_PROJECT_NUMBER_DEV)
+      GCP_WIF_POOL_ID: $(GCP_WIF_POOL_ID_DEV)
+      GCP_WIF_PROVIDER_ID: $(GCP_WIF_PROVIDER_ID)
+      SERVICE_PREFIX: "$(serviceAbbreviation)"
+      TERRAGRUNT_COMMAND: "plan"
+      DYNAMIC_MODULE_PATHS: $[ stageDependencies.DetectIaCChanges.DetectChanges.outputs['DetectIaCChanges.DEV_MODULES_JSON'] ]
+      DEPENDS_ON:
+        - DetectIaCChanges
+      CONDITION: "and(succeeded(), eq(dependencies.DetectIaCChanges.outputs['DetectChanges.DetectIaCChanges.HAS_DEV_CHANGES'], 'true'))"
+
+  - template: ADOYaml/templates/wif-terragrunt-stage-template.yml@SharedPlatform
+    parameters:
+      ENV_NAME: "test"
+      GCP_PROJECT_NUMBER: $(GCP_PROJECT_NUMBER_TEST)
+      GCP_WIF_POOL_ID: $(GCP_WIF_POOL_ID_TEST)
+      GCP_WIF_PROVIDER_ID: $(GCP_WIF_PROVIDER_ID)
+      SERVICE_PREFIX: "$(serviceAbbreviation)"
+      TERRAGRUNT_COMMAND: "plan"
+      DYNAMIC_MODULE_PATHS: $[ stageDependencies.DetectIaCChanges.DetectChanges.outputs['DetectIaCChanges.TEST_MODULES_JSON'] ]
+      DEPENDS_ON:
+        - DetectIaCChanges
+      CONDITION: "and(succeeded(), eq(dependencies.DetectIaCChanges.outputs['DetectChanges.DetectIaCChanges.HAS_TEST_CHANGES'], 'true'))"
+
+  - template: ADOYaml/templates/wif-terragrunt-stage-template.yml@SharedPlatform
+    parameters:
+      ENV_NAME: "sand"
+      GCP_PROJECT_NUMBER: $(GCP_PROJECT_NUMBER_SAND)
+      GCP_WIF_POOL_ID: $(GCP_WIF_POOL_ID_SAND)
+      GCP_WIF_PROVIDER_ID: $(GCP_WIF_PROVIDER_ID)
+      SERVICE_PREFIX: "$(serviceAbbreviation)"
+      TERRAGRUNT_COMMAND: "plan"
+      DYNAMIC_MODULE_PATHS: $[ stageDependencies.DetectIaCChanges.DetectChanges.outputs['DetectIaCChanges.SAND_MODULES_JSON'] ]
+      DEPENDS_ON:
+        - DetectIaCChanges
+      CONDITION: "and(succeeded(), eq(dependencies.DetectIaCChanges.outputs['DetectChanges.DetectIaCChanges.HAS_SAND_CHANGES'], 'true'))"
+
+  - template: ADOYaml/templates/wif-terragrunt-stage-template.yml@SharedPlatform
+    parameters:
+      ENV_NAME: "prod"
+      GCP_PROJECT_NUMBER: $(GCP_PROJECT_NUMBER_PROD)
+      GCP_WIF_POOL_ID: $(GCP_WIF_POOL_ID_PROD)
+      GCP_WIF_PROVIDER_ID: $(GCP_WIF_PROVIDER_ID)
+      SERVICE_PREFIX: "$(serviceAbbreviation)"
+      TERRAGRUNT_COMMAND: "plan"
+      DYNAMIC_MODULE_PATHS: $[ stageDependencies.DetectIaCChanges.DetectChanges.outputs['DetectIaCChanges.PROD_MODULES_JSON'] ]
+      DEPENDS_ON:
+        - DetectIaCChanges
+      CONDITION: "and(succeeded(), eq(dependencies.DetectIaCChanges.outputs['DetectChanges.DetectIaCChanges.HAS_PROD_CHANGES'], 'true'))"

@@ -1,0 +1,58 @@
+# Agent Service Template Configuration
+#
+# Structure: 1 repo → 3 GCP projects (dev/test/prod)
+#
+# Naming Convention: <AgentName>-Agent
+#   Repo:             DataAnalyzer-Agent
+#   Agent name (ADK): data_analyzer (underscores only — ADK requirement)
+#   IaC prefix:       dataanalyzer (no hyphens, no underscores)
+#   Display name:     Data Analyzer Agent
+#   GCP projects:     dataanalyzer-dev-project, dataanalyzer-test-project, dataanalyzer-prod-project
+#   Service account:  agent-dataanalyzer@dataanalyzer-{env}-project
+#   ADO pipeline:     DataAnalyzer-Agent-BuildAndDeploy
+#   Pipeline folder:  \AgentServices\agents\DataAnalyzer-Agent\
+#
+# Replace tokens in this order (longest first to avoid partial matches):
+#   1. {{AGENT_DISPLAY_NAME}}
+#   2. {{AGENT_NAME_LOWER}}
+#   3. {{DEPLOYMENT_GROUP_EMAIL}}
+#   4. {{SERVICE_PREFIX}}
+#   5. {{AGENT_NAME}}  ← LAST (its pattern is a substring of AGENT_NAME_LOWER)
+#
+# Then rename directories:
+#   agents/{{AGENT_NAME_LOWER}}/  →  agents/{agent_name}/
+#   InfrastructureAsCode/{{SERVICE_PREFIX}}/  →  InfrastructureAsCode/{prefix}/
+
+tokens:
+  AGENT_NAME: "MyAgent-Agent"                      # ADO repo name: <AgentName>-Agent
+  AGENT_NAME_LOWER: "my_agent"                     # ADK agent name: underscores only (Python identifier)
+  SERVICE_PREFIX: "myagent"                        # IaC app_id, GCP project prefix (no hyphens, no underscores)
+  AGENT_DISPLAY_NAME: "My Agent"                   # Human-readable name for Agent Engine
+  DEPLOYMENT_GROUP_EMAIL: "platform-team@example.com"
+
+# Naming rules:
+#   AGENT_NAME       — PascalCase-Agent. Must end with -Agent. (e.g., IncidentResponder-Agent)
+#   AGENT_NAME_LOWER — lowercase_with_underscores. Must be a valid Python identifier. (e.g., incident_responder)
+#   SERVICE_PREFIX   — lowercase, no separators. Used in GCP project + resource names. (e.g., incidentresponder)
+
+# GCP projects — derived from SERVICE_PREFIX: {SERVICE_PREFIX}-{env}-project
+# Each agent gets its own 3 projects:
+gcp_projects:
+  dev:  "{SERVICE_PREFIX}-dev-project"
+  test: "{SERVICE_PREFIX}-test-project"
+  prod: "{SERVICE_PREFIX}-prod-project"
+
+# WIF — project numbers must be filled in after GCP projects are created.
+wif:
+  provider_id: "azuredevops-wlif-provider"
+  pools:
+    dev:  { pool_id: "{SERVICE_PREFIX}-dev-wlif-pool",  project_number: "TBD" }
+    test: { pool_id: "{SERVICE_PREFIX}-test-wlif-pool", project_number: "TBD" }
+    prod: { pool_id: "{SERVICE_PREFIX}-prod-wlif-pool", project_number: "TBD" }
+
+# Prerequisites (one-time setup before first deploy):
+#   1. GCP projects created with Vertex AI API enabled
+#   2. WIF pools + OIDC provider created in each project
+#   3. GCS staging bucket created per project ({SERVICE_PREFIX}-{env}-agent-staging)
+#   4. gateway virtual key created and stored in Secret Manager per project
+#   5. google-adk pinned on terraform-builds agent image

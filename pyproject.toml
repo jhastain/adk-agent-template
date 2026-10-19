@@ -1,0 +1,89 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "{{AGENT_NAME_LOWER}}"
+version = "0.1.0"
+description = "{{AGENT_DISPLAY_NAME}} — ADK agent service"
+requires-python = ">=3.13"
+dependencies = [
+  "google-adk[extensions]",
+  "google-cloud-aiplatform>=1.155.0",
+  "litellm",
+  "mcp>=1.27.2",
+  "sentry-sdk",
+  "python-dotenv",
+  "python-json-logger",
+  "pydantic",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0.0",
+  "pytest-asyncio>=0.24.0",
+  "pytest-cov>=6.0.0",
+  "ruff>=0.11",
+  "pyright[nodejs]>=1.1.408",
+  "pre-commit>=4.0",
+  "deptry>=0.25.1",
+  "rich>=14.0.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+asyncio_mode = "strict"
+filterwarnings = [
+  "error",
+  "ignore:.*asyncio\\.iscoroutinefunction.*is deprecated.*:DeprecationWarning:sentry_sdk.*",
+  "ignore:.*EXPERIMENTAL.*:UserWarning:google.adk.*",
+]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+  "E",
+  "W",
+  "F",
+  "I",
+  "UP",
+  "B",
+  "SIM",
+  "RUF",
+  "ASYNC",
+  "S",
+  "T20",
+  "LOG",
+]
+ignore = [
+  "E402",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S106", "S311"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agents"]
+
+[tool.pyright]
+typeCheckingMode = "basic"
+include = ["agents", "tests"]
+strict = ["agents"]
+venvPath = "."
+venv = ".venv"
+
+[tool.hatch.build.targets.wheel]
+packages = ["agents"]
+
+[tool.uv]
+package = true
+
+[tool.coverage.run]
+omit = ["tests/*"]
+
+[tool.deptry.per_rule_ignores]
+DEP002 = []

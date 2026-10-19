@@ -1,0 +1,57 @@
+name: $(Build.BuildId) - {{AGENT_NAME}}-DevDeploy
+
+variables:
+  serviceAbbreviation: "{{SERVICE_PREFIX}}"
+  GCP_WIF_PROVIDER_ID: "azuredevops-wlif-provider"
+  GCP_PROJECT_NUMBER_DEV: "TBD"
+  GCP_WIF_POOL_ID_DEV: "agents-dev-wlif-pool"
+
+resources:
+  repositories:
+    - repository: SharedPlatform
+      type: git
+      name: YourProject/SharedPlatform
+      ref: refs/tags/iac-review-v1.0.0
+
+trigger: none
+
+stages:
+  - stage: DeployDevStage
+    displayName: "Deploy to Dev"
+    pool: terraform-builds
+    jobs:
+      - job: WifAuthDev
+        displayName: "WIF Auth → Dev"
+        steps:
+          - task: AzureCLI@2
+            displayName: "Get OIDC Token"
+            inputs:
+              azureSubscription: "ADO-GCP-WIF"
+              scriptType: pscore
+              scriptLocation: inlineScript
+              inlineScript: |
+                $jwt = az account get-access-token --query accessToken -o tsv
+                Write-Host "##vso[task.setvariable variable=OIDC_TOKEN;isOutput=true;issecret=true;]$jwt"
+            name: GetOidc
+
+      - job: DeployAgentEngineDev
+        displayName: "Agent Engine → Dev"
+        dependsOn: WifAuthDev
+        variables:
+          OIDC_TOKEN: $[ dependencies.WifAuthDev.outputs['GetOidc.OIDC_TOKEN'] ]
+        steps:
+          - checkout: self
+            fetchDepth: 2
+            fetchTags: false
+          - bash: |
+              curl -s -X POST "https://sts.googleapis.com/v1/token" \
+                -H "Content-Type: application/x-www-form-urlencoded" \
+                -d "grant_type=urn:ietf:params:oauth:grant-type:token-exchange&subject_token_type=urn:ietf:params:oauth:token-type:jwt&requested_token_type=urn:ietf:params:oauth:token-type:access_token&audience=//iam.googleapis.com/projects/$(GCP_PROJECT_NUMBER_DEV)/locations/global/workloadIdentityPools/$(GCP_WIF_POOL_ID_DEV)/providers/$(GCP_WIF_PROVIDER_ID)&subject_token=$(OIDC_TOKEN)" \
+                | python3 -c "import sys,json;t=json.load(sys.stdin)['access_token'];open('/tmp/gcp_token','w').write(t)"
+              gcloud config set auth/access_token_file /tmp/gcp_token
+              gcloud config set project $(serviceAbbreviation)-dev-project
+              bin/deploy-agent-engine.sh dev
+            displayName: "Deploy to Agent Engine (dev)"
+            env:
+              GOOGLE_CLOUD_PROJECT: "{{SERVICE_PREFIX}}-dev-project"
+              GOOGLE_CLOUD_LOCATION: us-central1
